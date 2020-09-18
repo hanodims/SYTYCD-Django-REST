@@ -1,5 +1,4 @@
 from datetime import date
-
 from rest_framework.permissions import BasePermission
 
 class IsBookedByUser(BasePermission):

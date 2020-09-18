@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from django.contrib.auth.models import User
 from rest_framework import serializers
 
 from .models import Hotel, Booking
@@ -7,13 +7,13 @@ from .models import Hotel, Booking
 
 class HotelsListSerializer(serializers.ModelSerializer):
 	details = serializers.HyperlinkedIdentityField(
-		view_name = "hotel-detail",
+		view_name = "hotel-details",
 		lookup_field = "id",
 		lookup_url_kwarg = "hotel_id"
 		)
 	class Meta:
 		model = Hotel
-		fields = ['name', 'details']
+		fields = ["id",'name', 'details']
 
 
 class HotelDetailsSerializer(serializers.ModelSerializer):
@@ -24,13 +24,16 @@ class HotelDetailsSerializer(serializers.ModelSerializer):
 		)
 	class Meta:
 		model = Hotel
-		fields = ["name", "location", "price", "book"]
+		fields = ["id","name", "location", "price_per_night", "book"]
 
 
 class BookHotelSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Booking
 		fields = ['check_in', 'number_of_nights']
+
+	def perform_create(self, serializer):
+		serializer.save(user=self.request.user, flight_id=self.kwargs['flight_id'])
 
 
 class BookingDetailsSerializer(serializers.ModelSerializer):
@@ -47,7 +50,7 @@ class BookingDetailsSerializer(serializers.ModelSerializer):
 		)
 	class Meta:
 		model = Booking
-		fields = ["hotel", "check_in", 'number_of_nights', 'modify']
+		fields = ["id","hotel", "check_in", 'number_of_nights', 'modify', 'cancel']
 
 
 class PastBookingDetailsSerializer(serializers.ModelSerializer):
@@ -64,13 +67,15 @@ class UserSerializer(serializers.ModelSerializer):
 		model = User
 		fields = ["username", "name", "email", "past_bookings"]
 
-	def name(self, obj):
+	def get_name(self, obj):
 		return "%s %s"%(obj.first_name, obj.last_name)
 
 	def get_past_bookings(self, obj):
 		today = datetime.today()
-		bookings = obj.bookings.filter(check_in__lt=today)
-		return PastBookingDetailsSerializer(bookings).data
+		#bookings = obj.bookings.filter(check_in__lt=today)
+		bookings_obj = obj.bookings.filter(check_in__lt=today)
+		bookings = PastBookingDetailsSerializer(bookings_obj,many=True).data
+		return bookings
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
